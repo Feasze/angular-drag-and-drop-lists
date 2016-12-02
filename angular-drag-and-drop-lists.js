@@ -66,8 +66,8 @@ angular.module('dndLists', [])
    *                      it's source position, and not the "element" that the user is dragging with
    *                      his mouse pointer.
    */
-  .directive('dndDraggable', ['$parse', '$timeout', 'dndDropEffectWorkaround', 'dndDragTypeWorkaround',
-                      function($parse,   $timeout,   dndDropEffectWorkaround,   dndDragTypeWorkaround) {
+  .directive('dndDraggable', ['$parse', '$timeout', 'dndDropEffectWorkaround', 'dndDragTypeWorkaround', 'dndDraggingOverList',
+                      function($parse,   $timeout,   dndDropEffectWorkaround,   dndDragTypeWorkaround,   dndDraggingOverList) {
     return function(scope, element, attr) {
       // Set the HTML5 draggable attribute on the element
       element.attr("draggable", "true");
@@ -150,6 +150,10 @@ angular.module('dndLists', [])
         element.removeClass("dndDragging");
         $timeout(function() { element.removeClass("dndDraggingSource"); }, 0);
         dndDragTypeWorkaround.isDragging = false;
+
+        if(dndDraggingOverList.placeholderCallback) {
+            dndDraggingOverList.placeholderCallback();
+        }
         event.stopPropagation();
       });
 
@@ -238,8 +242,8 @@ angular.module('dndLists', [])
    *                        by creating a child element with dndPlaceholder class.
    * - dndDragover          Will be added to the list while an element is dragged over the list.
    */
-  .directive('dndList', ['$parse', '$timeout', 'dndDropEffectWorkaround', 'dndDragTypeWorkaround',
-                 function($parse,   $timeout,   dndDropEffectWorkaround,   dndDragTypeWorkaround) {
+  .directive('dndList', ['$parse', '$timeout', 'dndDropEffectWorkaround', 'dndDragTypeWorkaround', 'dndDraggingOverList',
+                 function($parse,   $timeout,   dndDropEffectWorkaround,   dndDragTypeWorkaround,   dndDraggingOverList) {
     return function(scope, element, attr) {
       // While an element is dragged over the list, this placeholder element is inserted
       // at the location where the element would be inserted after dropping
@@ -269,6 +273,14 @@ angular.module('dndLists', [])
        */
       element.on('dragover', function(event) {
         event = event.originalEvent || event;
+
+      if(dndDraggingOverList.lastDragoverList != element) {
+          dndDraggingOverList.lastDragoverList = element;
+          if(dndDraggingOverList.placeholderCallback) {
+              dndDraggingOverList.placeholderCallback();
+              dndDraggingOverList.placeholderCallback = null;
+          }
+      }
 
         if (!isDropAllowed(event)) return true;
 
@@ -338,6 +350,8 @@ angular.module('dndLists', [])
       element.on('drop', function(event) {
         event = event.originalEvent || event;
 
+        dndDraggingOverList.lastDragoverList = null;
+
         if (!isDropAllowed(event)) return true;
 
         // The default behavior in Firefox is to interpret the dropped element as URL and
@@ -402,11 +416,24 @@ angular.module('dndLists', [])
         event = event.originalEvent || event;
 
         element.removeClass("dndDragover");
-        $timeout(function() {
-          if (!element.hasClass("dndDragover")) {
-            placeholder.remove();
+
+
+          if(dndDragTypeWorkaround.isDragging) {
+              if(dndDraggingOverList.lastDragoverList  == element) {
+                  dndDraggingOverList.placeholderCallback = function() {
+                      element.removeClass("dndDragover");
+                      placeholder.remove();
+                  }
+              }
+          } else {
+              dndDraggingOverList.lastDragoverList = null;
+              $timeout(function() {
+                  if (!element.hasClass("dndDragover")) {
+                      placeholder.remove();
+                  }
+              }, 100);
           }
-        }, 100);
+
       });
 
       /**
@@ -587,4 +614,5 @@ angular.module('dndLists', [])
    * variable. The bug report for that has been open for years:
    * https://code.google.com/p/chromium/issues/detail?id=39399
    */
-  .factory('dndDropEffectWorkaround', function(){ return {} });
+  .factory('dndDropEffectWorkaround', function(){ return {} })
+  .factory('dndDraggingOverList', function(){ return {} });
