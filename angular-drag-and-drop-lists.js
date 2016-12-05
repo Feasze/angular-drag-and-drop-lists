@@ -415,9 +415,6 @@ angular.module('dndLists', [])
       element.on('dragleave', function(event) {
         event = event.originalEvent || event;
 
-        element.removeClass("dndDragover");
-
-
           if(dndDragTypeWorkaround.isDragging) {
               if(dndDraggingOverList.lastDragoverList  == element) {
                   dndDraggingOverList.placeholderCallback = function() {
