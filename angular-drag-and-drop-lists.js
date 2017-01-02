@@ -112,6 +112,8 @@ angular.module('dndLists', [])
           event.dataTransfer.setDragImage(element[0], 0, 0);
         }
 
+        dndDragTypeWorkaround.data = event.dataTransfer.getData('Text');
+
         // Invoke callback
         $parse(attr.dndDragstart)(scope, {event: event});
 
@@ -418,6 +420,12 @@ angular.module('dndLists', [])
           if(dndDragTypeWorkaround.isDragging) {
               if(dndDraggingOverList.lastDragoverList  == element) {
                   dndDraggingOverList.placeholderCallback = function() {
+                      if(!dndDragTypeWorkaround.isDragging && dndDraggingOverList.lastDragoverList) {
+                          var data = JSON.parse(dndDragTypeWorkaround.data);
+                          var index = getPlaceholderIndex();
+                          invokeCallback(attr.dndDrop, event, index, data);
+                      }
+
                       element.removeClass("dndDragover");
                       placeholder.remove();
                   }
